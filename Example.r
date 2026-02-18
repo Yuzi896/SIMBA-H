@@ -44,31 +44,4 @@ system.time(
     )
 )
 
-if (OutcType == "continuous") {
-    MSE <- mean(apply(result$YpredTestSample, 2, mean) - mean(datTest$Y))
-    MSE.LB <- mean(apply(result$YpredTestSample, 2, function(x) quantile(x, probs = 0.025)) - mean(datTest$Y))
-    MSE.UB <- mean(apply(result$YpredTestSample, 2, function(x) quantile(x, probs = 0.975)) - mean(datTest$Y))
-    print(MSE)
-} else if (OutcType == "binary") {
-    MCE <- 1 - sum(diag(table(datTest$Y, apply(result$YpredTestSample, 2, mean) > 0))) / ntest
-    print(MCE)
-} else if (OutcType == "censored") {
-    CINDEX <- Cindex(Tpredict = apply(result$YpredTestSample, 2, mean), Ttest = datTest$Y[, 1], deltatest = datTest$Y[, 2])
-    print(paste("Cindex=", CINDEX))
-}
-
-quantile(result$CoefySample[, 1], probs = c(0.025, 0.5, 0.975))
-quantile(result$CoefySample[, 2], probs = c(0.025, 0.5, 0.975))
-summary(result$Betasample[, 1])
-quantile(result$Betasample[, 1], probs = c(0.025, 0.5, 0.975))
-quantile(result$Betasample[, 2], probs = c(0.025, 0.5, 0.975))
-result$MuMean[1, , ] ## Means within clusters for platform 1
-result$MuMean[2, , ] ## Mean within clusters for platform 2
-result$TransMatMean[1, , ] ## platform 1
-result$TransMatMean[2, , ] ## platform 2
-result$probZMean
-
-result$KappaMean[[1]][1, , ] ## prob values for platform 1 in cluster 1
-result$KappaMean[[1]][2, , ] ## prob values for platform 1 in cluster 2
-plot(result$logpostsample,type = "l")
-print(result$DIC)
+EvaluateTest(result,datTest$Y,OutcType,threshold = 0,return_all = TRUE)

@@ -54,7 +54,7 @@ EvaluateTest <- function(result, TestY, OutcType,
     # TRUE mean squared error
     mse <- mean((pred_mean - y_true)^2)
 
-    if (return_all) return(list(MSE = mse, pred_mean = pred_mean, pred_class = y_hat))
+    if (return_all) return(list(MSE = mse, pred_mean = pred_mean))
 
     return(mse)
   }

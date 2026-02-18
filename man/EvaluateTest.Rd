@@ -8,8 +8,9 @@ EvaluateTest(result, TestY, OutcType, threshold = 0, return_all = FALSE)
 }
 \arguments{
 \item{result}{A fitted model object returned by \code{\link{iBiclust}} containing
-\code{YpredTestSample} (posterior predictive samples for test outcomes).
-@param TestY Test-set response variable. For continuous or binary outcomes,
+\code{YpredTestSample} (posterior predictive samples for test outcomes).}
+
+\item{TestY}{Test-set response variable. For continuous or binary outcomes,
 this should be a numeric vector. For censored outcomes, this must be an
 \eqn{n \times 2} matrix of the form \code{cbind(time, censor)}, where the
 second column is a censoring indicator (1 = censored, 0 = event observed).}

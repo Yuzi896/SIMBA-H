@@ -1,9 +1,12 @@
 Package: iBHMM
 Title: iBHMM: Bayesian Supervised Biclustering via Hidden Markov Models
-Version: 1.0
+Version: 0.0.0.9000 
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Yuzi", "Mi", , "mi000014@umn.edu", role = c("aut", "cre"))
+Description: Implements a Bayesian supervised biclustering framework
+    using Hidden Markov Models for multi-modality data integration.
+    The model performs joint clustering and outcome modeling via
+    Gibbs sampling.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

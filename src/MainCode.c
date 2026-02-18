@@ -8,6 +8,8 @@
 #include "utils.h"
 #include "distribution.h"
 #include "GammaFunction.hpp"
+#include <R_ext/Print.h>
+
 // #include "functions.h"
 // To format a selection: CMD+K, CMD+F
 // #include "MCMC.h"
@@ -152,7 +154,7 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
     int *IDX = calloc(K, sizeof(int));
     findc(K, rho1, 0, IDX, &kl);
     Zk[i] = 1 + IDX[0];
-    // printf("%d ",Zk[i]);
+    // Rprintf("%d ",Zk[i]);
     free(rho1);
     free(probrho);
   }
@@ -180,14 +182,14 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
         ran_multinomial(3, 1, prob, kap);
         int kl;
         int *IDX = calloc(3, sizeof(int));
-        // printf("kap \n");
+        // Rprintf("kap \n");
         // for (int l=0;l<3;l++)
-        // printf("%d ",kap[l]);
+        // Rprintf("%d ",kap[l]);
 
         findc(3, kap, 0, IDX, &kl);
         kappajk[m][j][k] = 1 + IDX[0];
-        // printf("kappaInit \n");
-        // printf("%d, ",kappajk[j][k]);
+        // Rprintf("kappaInit \n");
+        // Rprintf("%d, ",kappajk[j][k]);
         free(kap);
         free(IDX);
       }
@@ -300,20 +302,20 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
   float *loglik = (float *)calloc(Nsample + burnin, sizeof(float));
 
   // loglik=NULL
-  // printf("\n");
+  // Rprintf("\n");
   int ll = 0;
   int lll = 0;
   int lt = 0;
   int lp = 0;
   for (int tt = 0; tt < (Nsample + burnin); tt++)
   {
-    // printf("Mcmc iteration: %d\n", tt);
+    // Rprintf("Mcmc iteration: %d\n", tt);
     int printNumber = (Nsample + burnin) / 10;
     if ((tt) % printNumber == 1)
     {
       // #print(paste("Number of mcmc iterations is ", tt))
-      printf("Mcmc iteration: %d\n", tt);
-      // printf("\rMcmc iteration: %d", tt);
+      Rprintf("Mcmc iteration: %d\n", tt);
+      // Rprintf("\rMcmc iteration: %d", tt);
       // cat(paste("\rmcmc iteration", tt))
     }
 
@@ -335,7 +337,7 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
         for (int l = 0; l < pc1; l++)
         {
           Betasample[ll] = Beta[l];
-          // printf("\nBet=%lf ",Beta[l]);
+          // Rprintf("\nBet=%lf ",Beta[l]);
           ll++;
         }
       }
@@ -452,12 +454,12 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
     double logs = 0;
     double lk = 0;
 
-    logposterior(n, M, p1, pc1, dat, Y, Cov, Beta, CoefY, sig2y, Mu, Muk, 
-    sigma2Muk, sigma2, sigma2j3, Zk, kappajk, TransMat, Omeg, alphaP, truncval, 
+    logposterior(n, M, p1, pc1, dat, Y, Cov, Beta, CoefY, sig2y, Mu, Muk,
+    sigma2Muk, sigma2, sigma2j3, Zk, kappajk, TransMat, Omeg, alphaP, truncval,
     alpha, rho, gam, sigma20Mu, delt, K, &logs, &lk);
     logpostsample[tt] = logs;
     loglik[tt] = lk;
-    // printf("logpostsample= %.2lf ", logpostsample[tt]);
+    // Rprintf("logpostsample= %.2lf ", logpostsample[tt]);
     // void logposterior(int n, int p,float ** dat,float ***Mu,float **Muk,float **sigma2Muk, float *** sigma2,float *sigma2j3,int *Zk, int ** kappajk,float ** TransMat,float* Omeg,float *alphaP,float truncval,float alpha,float rho,float gam,double sigma20Mu,float* delt,int K, float * logpost1,float *loglik1)
   } // end of loop tt
 
@@ -466,10 +468,10 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
   ll = 0;
   for (int i = 0; i < n; i++)
   {
-    // printf("\n%d,", i);
+    // Rprintf("\n%d,", i);
     for (int k = 0; k < K; k++)
     {
-      // printf(" %.2lf ", probZMean[i][k] / Nsample);
+      // Rprintf(" %.2lf ", probZMean[i][k] / Nsample);
       probZMean1[ll] = probZMean[i][k] / Nsample;
       ll++;
     }
@@ -479,19 +481,19 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
   for (int m = 0; m < M; m++)
   {
     int p = p1[m];
-    // printf("\nDataset: %d\n", m);
+    // Rprintf("\nDataset: %d\n", m);
     for (int k = 0; k < K; k++)
     {
       for (int j = 0; j < p; j++)
       {
         // if (j < 10)
-        //  printf("\n\n\n");
+        //  Rprintf("\n\n\n");
 
-        // printf("\n %d,",k);
+        // Rprintf("\n %d,",k);
         for (int l = 0; l < 3; l++)
         {
           // if (j < 10)
-          //  printf(" %.2lf ", probkappajk[m][j][k][l] / Nsample);
+          //  Rprintf(" %.2lf ", probkappajk[m][j][k][l] / Nsample);
           probkappajk1[ll] = probkappajk[m][j][k][l] / Nsample;
           ll++;
         }
@@ -500,54 +502,54 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
   }
 
   ll = 0;
-  // printf("\nTransMatMeans\n");
+  // Rprintf("\nTransMatMeans\n");
   for (int m = 0; m < M; m++)
   {
-    // printf("\nDataset: %d\n", m);
+    // Rprintf("\nDataset: %d\n", m);
     for (int l = 0; l < 3; l++)
     {
-      // printf("\n");
+      // Rprintf("\n");
       for (int l1 = 0; l1 < 3; l1++)
       {
         TransMatMean1[ll] = TransMatMean[m][l][l1];
         ll++;
-        // printf(" %.2lf ", TransMatMean[m][l][l1]);
+        // Rprintf(" %.2lf ", TransMatMean[m][l][l1]);
       }
     }
   }
 
   ll = 0;
-  // printf("\nMeans\n");
+  // Rprintf("\nMeans\n");
   for (int m = 0; m < M; m++)
   {
-    // printf("\nDataset: %d\n", m);
+    // Rprintf("\nDataset: %d\n", m);
     for (int k = 0; k < K; k++)
     {
-      // printf("\n %d,", k);
+      // Rprintf("\n %d,", k);
       for (int l = 0; l < 2; l++)
       {
         MuMean1[ll] = MuMean[m][k][l];
-        // printf(" %.2lf ", MuMean[m][k][l]);
+        // Rprintf(" %.2lf ", MuMean[m][k][l]);
         ll++;
       }
     }
   }
 
-  // printf("\nYMeans\n");
+  // Rprintf("\nYMeans\n");
   // for (int k = 0; k < K; k++)
   //{
-  //  printf("\n %d,", k);
-  //  printf(" %.2lf ", CoefYMean[k]);
+  //  Rprintf("\n %d,", k);
+  //  Rprintf(" %.2lf ", CoefYMean[k]);
   // }
   // cat("\n")
   // ttmax=which.max(logpostsample)
   int ttmax = maxIdx(Nsample + burnin, logpostsample);
   DIC[0] = -4 * Mean(Nsample + burnin, loglik) + 2 * loglik[ttmax];
 
-  // printf("\nDIC=%lf ",DIC[0]);
+  // Rprintf("\nDIC=%lf ",DIC[0]);
 
   // list(probZMean=probZMean/(Nsample),probkappajk=probkappajk/Nsample,TransMatMean=TransMatMean,MuMean=MuMean,
   //    logpostsample=logpostsample,DIC=-4*mean(loglik)+2*loglik[ttmax])
 
-  printf("\n");
+  Rprintf("\n");
 }

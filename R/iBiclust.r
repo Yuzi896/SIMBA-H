@@ -19,6 +19,13 @@
 #'         from the test data).
 #' }
 #'
+#' \strong{Ordering requirement (HMM):}
+#' If \code{Method = 1} (Hidden Markov Model), the features within each
+#' modality in \code{dataList} are assumed to be pre-ordered according to
+#' their natural or genomic sequence. The function does not reorder features
+#' internally.
+#'
+#'
 #' \strong{Outcome types:}
 #' \itemize{
 #'   \item \code{"continuous"}: \code{OutcomeType = 1}

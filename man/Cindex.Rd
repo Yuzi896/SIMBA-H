@@ -19,5 +19,5 @@ Numeric scalar concordance index.
 }
 \description{
 Computes the concordance index using predicted times, observed times, and
-censoring indicators.
+event indicators.
 }

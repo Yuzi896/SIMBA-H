@@ -1,7 +1,7 @@
 #' Concordance Index (C-index) for Censored Outcomes
 #'
 #' Computes the concordance index using predicted times, observed times, and
-#' censoring indicators.
+#' event indicators.
 #'
 #' @param Tpredict Numeric vector of predicted times.
 #' @param Ttest Numeric vector of observed times.

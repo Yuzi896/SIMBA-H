@@ -43,7 +43,7 @@ where the second column represents the \emph{censoring indicator}
 
 \item{burnin}{Number of burn-in iterations.}
 
-\item{K}{Number of sample clusters (states) used in the model.}
+\item{K}{Number of sample clusters used in the model.}
 
 \item{normalized}{Logical; if \code{TRUE}, each modality is centered and scaled feature-wise.}
 
@@ -94,7 +94,7 @@ to the native routine.
 \details{
 \strong{Data format:}
 \itemize{
-\item \code{dataList} must be a list of length \code{M1} (number of modalities/platforms).
+\item \code{dataList} must be a list of length \code{M} (number of modalities/platforms).
 \item Each element \code{dataList[[t]]} is an \eqn{n \times p_t} matrix:
 \eqn{n} samples (rows) and \eqn{p_t} features (columns).
 \item If \code{normalized = TRUE}, each modality in \code{dataList} is centered and

@@ -9,7 +9,7 @@
 #' @details
 #' \strong{Data format:}
 #' \itemize{
-#'   \item \code{dataList} must be a list of length \code{M1} (number of modalities/platforms).
+#'   \item \code{dataList} must be a list of length \code{M} (number of modalities/platforms).
 #'   \item Each element \code{dataList[[t]]} is an \eqn{n \times p_t} matrix:
 #'         \eqn{n} samples (rows) and \eqn{p_t} features (columns).
 #'   \item If \code{normalized = TRUE}, each modality in \code{dataList} is centered and
@@ -45,7 +45,7 @@
 #' @param Cov Covariate matrix of dimension \eqn{n \times p_c}.
 #' @param sample Number of MCMC samples to retain.
 #' @param burnin Number of burn-in iterations.
-#' @param K Number of sample clusters (states) used in the model.
+#' @param K Number of sample clusters used in the model.
 #' @param normalized Logical; if \code{TRUE}, each modality is centered and scaled feature-wise.
 #' @param seed Integer random seed passed to the native routine.
 #' @param hyperSigma Numeric vector of length 2. The prior distribution on the

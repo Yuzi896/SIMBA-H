@@ -6,6 +6,7 @@
 \usage{
 iGenDataHMM(
   OrderFeatured = FALSE,
+  NumberFeature = 100,
   K = K,
   NbrPlat = 2,
   OutcType = "continuous",
@@ -25,6 +26,8 @@ iGenDataHMM(
 \item{OrderFeatured}{Logical; if \code{TRUE}, uses a deterministic ordering for
 feature membership in each modality (features 1--100 over-expressed and
 101--200 under-expressed). If \code{FALSE}, feature membership is randomized.}
+
+\item{NumberFeature}{Integer; number of features sampled in over-expressed and under-expressed group.}
 
 \item{K}{Integer; number of clusters.}
 
@@ -101,8 +104,8 @@ K <- 2
 p <- c(300, 500)
 n <- 100
 dat <- iGenDataHMM(
-  OrderFeatured = TRUE, K = K, NbrPlat = 2, OutcType = "continuous",
-  MeanY = c(1, -1), pc = 4, betacov = 1.0,
+  OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2,
+  OutcType = "continuous", MeanY = c(1, -1), pc = 4, betacov = 1.0,
   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
   p = p, seed = 1, n = n,
   SigmaOE = rep(1, K), SigmaUE = rep(1, K)

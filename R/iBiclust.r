@@ -88,13 +88,13 @@
 #' \dontrun{
 #' ## Generate synthetic multi-modality data
 #' K <- 2
-#' p <- c(30, 50)   # smaller for an example
-#' n <- 50
+#' p <- c(300, 500)   # smaller for an example
+#' n <- 100
 #' nbrcov <- 4
 #' OutcType <- "continuous"
 #'
 #' dat <- iGenDataHMM(
-#'   OrderFeatured = TRUE, K = K, NbrPlat = 2, OutcType = OutcType,
+#'   OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2, OutcType = OutcType,
 #'   MeanY = c(rep(1, floor(K/2)), rep(-1, K - floor(K/2))),
 #'   pc = nbrcov, betacov = 1.0,
 #'   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
@@ -103,9 +103,9 @@
 #' )
 #'
 #' ## Generate test data
-#' ntest <- 20
+#' ntest <- 100
 #' datTest <- iGenDataHMM(
-#'   OrderFeatured = TRUE, K = K, NbrPlat = 2, OutcType = OutcType,
+#'   OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2, OutcType = OutcType,
 #'   MeanY = c(rep(1, floor(K/2)), rep(-1, K - floor(K/2))),
 #'   pc = nbrcov, betacov = 1.0,
 #'   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,

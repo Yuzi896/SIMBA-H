@@ -26,6 +26,7 @@
 #' @param OrderFeatured Logical; if \code{TRUE}, uses a deterministic ordering for
 #'   feature membership in each modality (features 1--100 over-expressed and
 #'   101--200 under-expressed). If \code{FALSE}, feature membership is randomized.
+#' @param NumberFeature Integer; number of features sampled in over-expressed and under-expressed group.
 #' @param K Integer; number of clusters.
 #' @param NbrPlat Integer; number of modalities/platforms/views.
 #' @param OutcType Outcome type: one of \code{"continuous"}, \code{"binary"}, or \code{"censored"}.
@@ -64,8 +65,8 @@
 #' p <- c(300, 500)
 #' n <- 100
 #' dat <- iGenDataHMM(
-#'   OrderFeatured = TRUE, K = K, NbrPlat = 2, OutcType = "continuous",
-#'   MeanY = c(1, -1), pc = 4, betacov = 1.0,
+#'   OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2,
+#'   OutcType = "continuous", MeanY = c(1, -1), pc = 4, betacov = 1.0,
 #'   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
 #'   p = p, seed = 1, n = n,
 #'   SigmaOE = rep(1, K), SigmaUE = rep(1, K)
@@ -75,7 +76,7 @@
 #' @export
 
 iGenDataHMM <- function(
-    OrderFeatured = FALSE, K = K, NbrPlat = 2, OutcType = "continuous",
+    OrderFeatured = FALSE, NumberFeature = 100, K = K, NbrPlat = 2, OutcType = "continuous",
     MeanY = MeanY, pc = NULL, betacov = 1, MeanOverExpre = 1:K,
     MeanUnderExpre = -c(1:K), p = p, seed = 1, n = n,
     SigmaOE = rep(1, K), SigmaUE = rep(1, K)) {
@@ -96,13 +97,13 @@ iGenDataHMM <- function(
     # create a p[m] x K matrix filled with 3
     kappajk[[m]] <- matrix(3, p[m], K)
     if (KappaKnown == TRUE) {
-      kappajk[[m]][1:100, ] <- 1
-      kappajk[[m]][101:200, ] <- 2
+      kappajk[[m]][1:NumberFeature, ] <- 1
+      kappajk[[m]][(NumberFeature+1):(NumberFeature*2), ] <- 2
     } else {
       # random sample under and over expressed genes in each platform
-      x1 <- sample(p[m], 100)
+      x1 <- sample(p[m], NumberFeature)
       kappajk[[m]][x1, ] <- 1
-      x2 <- sample(c(1:p[m])[-x1], 100)
+      x2 <- sample(c(1:p[m])[-x1], NumberFeature)
       kappajk[[m]][x2, ] <- 2
     }
   }

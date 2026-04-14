@@ -25,7 +25,7 @@ iBiclust(
 }
 \arguments{
 \item{Method}{Integer specifying the modeling approach.
-If \code{Method = 1}, the model incorporates a Hidden Markov Model (HMM)}
+If \code{Method = 1}, the model incorporates a Hidden Markov Model (HMM). If \code{Method = 2}, the model will not incorporate the HMM structure.}
 
 \item{dataList}{A list of modality matrices. Each \code{dataList[[t]]} is an
 \eqn{n \times p_t} matrix with samples in rows and features in columns.}

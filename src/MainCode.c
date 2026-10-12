@@ -1,3 +1,4 @@
+#include <R.h>
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
@@ -8,19 +9,17 @@
 #include "utils.h"
 #include "distribution.h"
 #include "GammaFunction.hpp"
-#include <R_ext/Print.h>
-
 // #include "functions.h"
 // To format a selection: CMD+K, CMD+F
 // #include "MCMC.h"
-void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, double *Data1,
+void MCMCfunctionWithProbAndZSamples(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, double *Data1,
                   double *Cov1, int *pc, double *Youtcome, int *KK, double *truncatedvalue,
                   double *rhosigma, double *gamsigma, double *alphaP, double *delt,
                   double *sigma20Mu1, int *Nsample1, int *burnin1, int *seed1, double *probZMean1,
                   double *probkappajk1, double *TransMatMean1, double *MuMean1,
                   double *CoefYsample, double *sig2yMean, double *logpostsample,
                   double *Betasample, double *DIC, int *nnTest, double *DataTest1,
-                  double *CovTest1, double *YpredTest, int *Ztest)
+                  double *CovTest1, double *YpredTest, int *Ztest, double *MuSample, double *probZSample, double *probKappaSample, int *Zsample)
 // MCMCfunction<-function(Method="HMM",Data=Data,K=K,t=0.01,alpha=0,rho=.1,gam=.1,alphaP=rep(1,K),
 //                      delt=rep(1,3),sigma20Mu=1000,
 //                    Nsample=1000, burnin=300,seed=1)
@@ -222,25 +221,25 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
   float *Omeg = (float *)calloc(K, sizeof(float));
   float ****sigma2 = (float ****)calloc(M, sizeof(float ***));
   float ****Mu = (float ****)calloc(M, sizeof(float ***));
-  float ****probkappajk = (float ****)calloc(M, sizeof(float ***));
+  double ****probkappajk = (double ****)calloc(M, sizeof(double ***));
 
   for (int m = 0; m < M; m++)
   {
     int p = p1[m];
     sigma2[m] = (float ***)calloc(p, sizeof(float **));
     Mu[m] = (float ***)calloc(p, sizeof(float **));
-    probkappajk[m] = (float ***)calloc(p, sizeof(float **));
+    probkappajk[m] = (double ***)calloc(p, sizeof(double **));
 
     for (int j = 0; j < p; j++)
     {
       sigma2[m][j] = (float **)calloc(K, sizeof(float *));
       Mu[m][j] = (float **)calloc(K, sizeof(float *));
-      probkappajk[m][j] = (float **)calloc(K, sizeof(float *));
+      probkappajk[m][j] = (double **)calloc(K, sizeof(double *));
       for (int k = 0; k < K; k++)
       {
         sigma2[m][j][k] = (float *)calloc(2, sizeof(float));
         Mu[m][j][k] = (float *)calloc(3, sizeof(float));
-        probkappajk[m][j][k] = (float *)calloc(3, sizeof(float));
+        probkappajk[m][j][k] = (double *)calloc(3, sizeof(double));
         for (int l = 0; l < 2; l++)
         {
           sigma2[m][j][k][l] = 1.0;
@@ -262,10 +261,10 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
 
   // We set output
   // probZMean=matrix(0,n,K);
-  float **probZMean = (float **)calloc(n, sizeof(float *));
+  double **probZMean = (double **)calloc(n, sizeof(double *));
   for (int i = 0; i < n; i++)
   {
-    probZMean[i] = (float *)calloc(K, sizeof(float));
+    probZMean[i] = (double *)calloc(K, sizeof(double));
   }
 
   // probkappajk=array(0, dim=c(p,K,3));
@@ -373,12 +372,14 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
       //    ### Sample MU and Sigma
       SampleMuSigma(K, p, n, Zk, kappajk[m], Mu[m], Muk[m], sigma2[m], sigma2Muk[m], TransMat[m], dat[m], sigma2j3[m], rho, gam, alpha, sigma20Mu, truncval);
 
-      if (tt > burnin)
+      if (tt >= burnin)
       {
         for (int l = 0; l < 2; l++)
         {
           for (int k = 0; k < K; k++)
           {
+            if (MuSample != NULL)
+              MuSample[(((size_t)(tt - burnin) * M + m) * K + k) * 2 + l] = Muk[m][k][l];
             MuMean[m][k][l] = MuMean[m][k][l] + Muk[m][k][l] / Nsample;
             SigmaMuMean[m][k][l] = SigmaMuMean[m][k][l] + sigma2Muk[m][k][l] / Nsample;
           }
@@ -391,7 +392,13 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
       // ### Sample latent kappa
       // ## Sample kappa
 
-      SampleKappa(K, p, n, Zk, kappajk[m], Mu[m], sigma2[m], TransMat[m], dat[m], sigma2j3[m]);
+      // Platform blocks contain [iteration, feature, cluster, state].
+      size_t kappaOffset = 0;
+      for (int mm = 0; mm < m; mm++)
+        kappaOffset += (size_t)Nsample * p1[mm] * K * 3;
+      double *kappaProb = (tt >= burnin && probKappaSample != NULL)
+          ? probKappaSample + kappaOffset + (size_t)(tt - burnin) * p * K * 3 : NULL;
+      SampleKappa(K, p, n, Zk, kappajk[m], Mu[m], sigma2[m], TransMat[m], dat[m], sigma2j3[m], kappaProb);
       for (int k = 0; k < K; k++)
       {
         for (int j = 0; j < p; j++)
@@ -401,7 +408,7 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
           {
             for (int l = 0; l < 3; l++)
             {
-              probkappajk[m][j][k][l] = probkappajk[m][j][k][l] + (kappajk[m][j][k] == (l + 1));
+              probkappajk[m][j][k][l] = probkappajk[m][j][k][l] + (kappaProb != NULL ? kappaProb[((size_t)j * K + k) * 3 + l] : (kappajk[m][j][k] == (l + 1)));
             }
           }
         }
@@ -414,10 +421,12 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
     // Omeg=rdirichlet(1,as.vector(alphaP+sapply(1:K,function(x) sum(Zk==x))))
 
     // ## Sample Z
-    SampleZ(Zk, M, n, K, p1, kappajk, sigma2, dat, Mu, sigma2j3, Y1, CoefY, sig2y, Omeg, 0);
+    double *zProb = (tt >= burnin && probZSample != NULL)
+        ? probZSample + (size_t)(tt - burnin) * n * K : NULL;
+    SampleZ(Zk, M, n, K, p1, kappajk, sigma2, dat, Mu, sigma2j3, Y1, CoefY, sig2y, Omeg, 0, zProb);
 
     // Sample Z on the test data
-    SampleZ(Zktest, M, nTest, K, p1, kappajk, sigma2, datTest, Mu, sigma2j3, Y1, CoefY, sig2y, Omeg, 1);
+    SampleZ(Zktest, M, nTest, K, p1, kappajk, sigma2, datTest, Mu, sigma2j3, Y1, CoefY, sig2y, Omeg, 1, NULL);
     // Predict Y on test data
 
     YPredict(Ypred, Zktest, pc1, CovTest, nTest, K, Beta, CoefY);
@@ -441,9 +450,12 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
 
       if (tt >= burnin)
       {
+        // Actual sampled labels from the same update that produced zProb.
+        if (Zsample != NULL)
+          Zsample[(size_t)(tt - burnin) * n + i] = Zk[i];
         for (int k = 0; k < K; k++)
         {
-          probZMean[i][k] = probZMean[i][k] + (Zk[i] == (k + 1));
+          probZMean[i][k] = probZMean[i][k] + (zProb != NULL ? zProb[(size_t)i * K + k] : (Zk[i] == (k + 1)));
         }
       }
     }
@@ -552,4 +564,40 @@ void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, doub
   //    logpostsample=logpostsample,DIC=-4*mean(loglik)+2*loglik[ttmax])
 
   Rprintf("\n");
+}
+
+// Compatibility entry point for the original summary-only interface.
+void MCMCfunction(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, double *Data1,
+                  double *Cov1, int *pc, double *Youtcome, int *KK, double *truncatedvalue,
+                  double *rhosigma, double *gamsigma, double *alphaP, double *delt,
+                  double *sigma20Mu1, int *Nsample1, int *burnin1, int *seed1, double *probZMean1,
+                  double *probkappajk1, double *TransMatMean1, double *MuMean1,
+                  double *CoefYsample, double *sig2yMean, double *logpostsample,
+                  double *Betasample, double *DIC, int *nnTest, double *DataTest1,
+                  double *CovTest1, double *YpredTest, int *Ztest)
+{
+  MCMCfunctionWithProbSamples(Method, OutcomeType, M1, p1, nn, Data1,
+      Cov1, pc, Youtcome, KK, truncatedvalue, rhosigma, gamsigma,
+      alphaP, delt, sigma20Mu1, Nsample1, burnin1, seed1, probZMean1,
+      probkappajk1, TransMatMean1, MuMean1, CoefYsample, sig2yMean,
+      logpostsample, Betasample, DIC, nnTest, DataTest1, CovTest1,
+      YpredTest, Ztest, NULL, NULL, NULL);
+}
+
+// Compatibility entry point for callers saving probabilities without labels.
+void MCMCfunctionWithProbSamples(int *Method, int *OutcomeType, int *M1, int *p1, int *nn, double *Data1,
+                  double *Cov1, int *pc, double *Youtcome, int *KK, double *truncatedvalue,
+                  double *rhosigma, double *gamsigma, double *alphaP, double *delt,
+                  double *sigma20Mu1, int *Nsample1, int *burnin1, int *seed1, double *probZMean1,
+                  double *probkappajk1, double *TransMatMean1, double *MuMean1,
+                  double *CoefYsample, double *sig2yMean, double *logpostsample,
+                  double *Betasample, double *DIC, int *nnTest, double *DataTest1,
+                  double *CovTest1, double *YpredTest, int *Ztest, double *MuSample, double *probZSample, double *probKappaSample)
+{
+  MCMCfunctionWithProbAndZSamples(Method, OutcomeType, M1, p1, nn, Data1,
+      Cov1, pc, Youtcome, KK, truncatedvalue, rhosigma, gamsigma,
+      alphaP, delt, sigma20Mu1, Nsample1, burnin1, seed1, probZMean1,
+      probkappajk1, TransMatMean1, MuMean1, CoefYsample, sig2yMean,
+      logpostsample, Betasample, DIC, nnTest, DataTest1, CovTest1,
+      YpredTest, Ztest, MuSample, probZSample, probKappaSample, NULL);
 }

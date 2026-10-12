@@ -5,7 +5,7 @@
 \title{Bayesian Supervised Biclustering via Hidden Markov Models for Multi-Modal Data}
 \usage{
 iBiclust(
-  Method = 1,
+  Enable_HMM = TRUE,
   dataList = dataList,
   OutcType = "continuous",
   Youtcome = Youtcome,
@@ -20,12 +20,14 @@ iBiclust(
   delt = rep(1, 3),
   TruncVal = 0.1,
   dataListTest = NULL,
-  CovTest = NULL
+  CovTest = NULL,
+  return_samples = FALSE
 )
 }
 \arguments{
-\item{Method}{Integer specifying the modeling approach.
-If \code{Method = 1}, the model incorporates a Hidden Markov Model (HMM). If \code{Method = 2}, the model will not incorporate the HMM structure.}
+\item{Enable_HMM}{Logical; if \code{TRUE} (default), the model incorporates
+a Hidden Markov Model (HMM). If \code{FALSE}, the model does not incorporate
+the HMM structure.}
 
 \item{dataList}{A list of modality matrices. Each \code{dataList[[t]]} is an
 \eqn{n \times p_t} matrix with samples in rows and features in columns.}
@@ -66,10 +68,19 @@ matrix \eqn{\xi}.}
 \item{dataListTest}{Optional test set list with same structure as \code{dataList}.}
 
 \item{CovTest}{Optional test covariate matrix of dimension \eqn{n_{test} \times p_c}.}
+
+\item{return_samples}{Logical; additionally return ZSample, probZSample,
+MuSample, and probKappaSample when TRUE (default FALSE).}
 }
 \value{
-A list with posterior summaries and samples:
+A list with posterior summaries, coefficient draws, test labels and
+predictions, and log-posterior values. Only ZSample, probZSample, MuSample,
+and probKappaSample require \code{return_samples = TRUE}. Label switching
+is checked automatically. If label switching occurs, cluster labels are
+aligned using iterative ECR:
 \describe{
+\item{ZSample, probZSample, MuSample, probKappaSample}{Retained labels, cluster
+probabilities, latent means, and feature-state probabilities when requested.}
 \item{DIC}{Deviance Information Criterion returned by the sampler.}
 \item{probZMean}{Matrix of posterior mean cluster membership probabilities (\eqn{n \times K}).}
 \item{MuMean}{Array of posterior means of the latent mean parameters \eqn{\mu_{dkl}} for the over- and under-expressed
@@ -105,7 +116,7 @@ from the test data).
 }
 
 \strong{Ordering requirement (HMM):}
-If \code{Method = 1} (Hidden Markov Model), the features within each
+If \code{Enable_HMM = TRUE} (Hidden Markov Model), the features within each
 modality in \code{dataList} are assumed to be pre-ordered according to
 their natural or genomic sequence. The function does not reorder features
 internally.
@@ -133,7 +144,7 @@ nbrcov <- 4
 OutcType <- "continuous"
 
 dat <- iGenDataHMM(
-  OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2, OutcType = OutcType,
+  OrderFeatured = TRUE, nActive = 100, K = K, NbrPlat = 2, OutcType = OutcType,
   MeanY = c(rep(1, floor(K/2)), rep(-1, K - floor(K/2))),
   pc = nbrcov, betacov = 1.0,
   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
@@ -144,7 +155,7 @@ dat <- iGenDataHMM(
 ## Generate test data
 ntest <- 100
 datTest <- iGenDataHMM(
-  OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2, OutcType = OutcType,
+  OrderFeatured = TRUE, nActive = 100, K = K, NbrPlat = 2, OutcType = OutcType,
   MeanY = c(rep(1, floor(K/2)), rep(-1, K - floor(K/2))),
   pc = nbrcov, betacov = 1.0,
   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
@@ -154,7 +165,7 @@ datTest <- iGenDataHMM(
 
 ## Fit model (keep MCMC small in examples)
 result <- iBiclust(
-  Method = 1,
+  Enable_HMM = TRUE,
   dataList = dat$X,
   Youtcome = dat$Y,
   OutcType = OutcType,

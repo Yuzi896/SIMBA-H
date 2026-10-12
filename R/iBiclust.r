@@ -20,7 +20,7 @@
 #' }
 #'
 #' \strong{Ordering requirement (HMM):}
-#' If \code{Method = 1} (Hidden Markov Model), the features within each
+#' If \code{Enable_HMM = TRUE} (Hidden Markov Model), the features within each
 #' modality in \code{dataList} are assumed to be pre-ordered according to
 #' their natural or genomic sequence. The function does not reorder features
 #' internally.
@@ -40,8 +40,9 @@
 #' the training means/SDs.
 #'
 #'
-#' @param Method Integer specifying the modeling approach.
-#'   If \code{Method = 1}, the model incorporates a Hidden Markov Model (HMM). If \code{Method = 2}, the model will not incorporate the HMM structure.
+#' @param Enable_HMM Logical; if \code{TRUE} (default), the model incorporates
+#'   a Hidden Markov Model (HMM). If \code{FALSE}, the model does not incorporate
+#'   the HMM structure.
 #' @param dataList A list of modality matrices. Each \code{dataList[[t]]} is an
 #'   \eqn{n \times p_t} matrix with samples in rows and features in columns.
 #' @param OutcType Outcome type: one of \code{"continuous"}, \code{"binary"}, or \code{"censored"}.
@@ -68,8 +69,16 @@
 #' @param dataListTest Optional test set list with same structure as \code{dataList}.
 #' @param CovTest Optional test covariate matrix of dimension \eqn{n_{test} \times p_c}.
 #'
-#' @returns A list with posterior summaries and samples:
+#' @param return_samples Logical; additionally return ZSample, probZSample,
+#'   MuSample, and probKappaSample when TRUE (default FALSE).
+#' @returns A list with posterior summaries, coefficient draws, test labels and
+#'   predictions, and log-posterior values. Only ZSample, probZSample, MuSample,
+#'   and probKappaSample require \code{return_samples = TRUE}. Label switching
+#'   is checked automatically. If label switching occurs, cluster labels are
+#'   aligned using iterative ECR:
 #' \describe{
+#'   \item{ZSample, probZSample, MuSample, probKappaSample}{Retained labels, cluster
+#'     probabilities, latent means, and feature-state probabilities when requested.}
 #'   \item{DIC}{Deviance Information Criterion returned by the sampler.}
 #'   \item{probZMean}{Matrix of posterior mean cluster membership probabilities (\eqn{n \times K}).}
 #'   \item{MuMean}{Array of posterior means of the latent mean parameters \eqn{\mu_{dkl}} for the over- and under-expressed
@@ -94,7 +103,7 @@
 #' OutcType <- "continuous"
 #'
 #' dat <- iGenDataHMM(
-#'   OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2, OutcType = OutcType,
+#'   OrderFeatured = TRUE, nActive = 100, K = K, NbrPlat = 2, OutcType = OutcType,
 #'   MeanY = c(rep(1, floor(K/2)), rep(-1, K - floor(K/2))),
 #'   pc = nbrcov, betacov = 1.0,
 #'   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
@@ -105,7 +114,7 @@
 #' ## Generate test data
 #' ntest <- 100
 #' datTest <- iGenDataHMM(
-#'   OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2, OutcType = OutcType,
+#'   OrderFeatured = TRUE, nActive = 100, K = K, NbrPlat = 2, OutcType = OutcType,
 #'   MeanY = c(rep(1, floor(K/2)), rep(-1, K - floor(K/2))),
 #'   pc = nbrcov, betacov = 1.0,
 #'   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
@@ -115,7 +124,7 @@
 #'
 #' ## Fit model (keep MCMC small in examples)
 #' result <- iBiclust(
-#'   Method = 1,
+#'   Enable_HMM = TRUE,
 #'   dataList = dat$X,
 #'   Youtcome = dat$Y,
 #'   OutcType = OutcType,
@@ -140,11 +149,18 @@
 #' @export
 
 iBiclust <- function(
-    Method = 1, dataList = dataList, OutcType = "continuous",
+    Enable_HMM = TRUE, dataList = dataList, OutcType = "continuous",
     Youtcome = Youtcome, Cov = NULL, sample = 2000, burnin = 1000, K = 2,
     normalized = TRUE, seed = 1, hyperSigma = c(1, 1), alphaP = rep(1, K),
-    delt = rep(1, 3), TruncVal = .1, dataListTest = NULL, CovTest = NULL) {
-   # dyn.load("~/Desktop/~/RA_Thierry/bicluster/CodeBiolo/IBiclust.so")
+    delt = rep(1, 3), TruncVal = .1, dataListTest = NULL, CovTest = NULL,
+    return_samples = FALSE) {
+  if (!is.logical(Enable_HMM) || length(Enable_HMM) != 1L || is.na(Enable_HMM)) {
+    stop("Enable_HMM must be TRUE or FALSE")
+  }
+  # Latent draws are used for label switching; return those only on request.
+  if (!is.logical(return_samples) || length(return_samples) != 1L || is.na(return_samples)) {
+    stop("return_samples must be TRUE or FALSE")
+  }
   if (OutcType == "continuous") {
     OutcomeType <- 1
   } else if (OutcType == "binary") {
@@ -215,8 +231,9 @@ iBiclust <- function(
   # double *rhosigma, double *gamsigma, double *alphaP, double *delt, double *sigma20Mu1, int *Nsample1,
   # int *burnin1, int *seed1,double *probZMean1, double *probkappajk1, double *TransMatMean1, double *MuMean1, d
   # ouble *CoefYMean, double *sig2yMean, float *logpostsample, float *DIC)
-  res <- .C("MCMCfunction",
-            Method = as.integer(Method), OutcomeType = as.integer(OutcomeType),
+  sampler <- getNativeSymbolInfo("MCMCfunctionWithProbAndZSamples", PACKAGE = "iBHMM")
+  res <- .C(sampler,
+            Method = as.integer(Enable_HMM), OutcomeType = as.integer(OutcomeType),
             M1 = as.integer(NbrPlat),
             p1 = as.integer(P), nn = as.integer(n), Data1 = as.double(datasets),
             Cov1 = as.double(Cov1), pc = as.integer(pc),
@@ -236,16 +253,22 @@ iBiclust <- function(
             DIC = as.double(0), nnTest = as.integer(ntest),
             DataTest1 = as.double(datasetsTest), CovTest1 = as.double(CovTest1),
             YpredTest = as.double(rep(0, sample * ntest)),
-            Ztest = as.integer(rep(0, sample * ntest))
+            Ztest = as.integer(rep(0, sample * ntest)),
+            MuSample = double(sample * NbrPlat * K * 2),
+            probZSample = double(sample * n * K),
+            probKappaSample = double(sample * sum(P) * K * 3),
+            ZSample = integer(sample * n)
   )
 
 
 
-  Betasample1 <- t(matrix(res$Betasample, nrow = pc))
+  Betasample1 <- matrix(res$Betasample, nrow = sample, ncol = pc, byrow = TRUE)
 
   # SampleCoefy=matrix(res$SampleCoefy,sample,K,byrow = T)
 
   KappaMean <- list()
+  probKappaSample <- vector("list", NbrPlat)
+  kappaOffset <- 0
   MuMean <- aperm(array(res$MuMean1, c(2, K, NbrPlat))) # is the dimension flipped?
   TransMatMean <- aperm(array(res$TransMatMean1, c(3, 3, NbrPlat)))
 
@@ -255,16 +278,70 @@ iBiclust <- function(
     probk <- res$probkappajk1[m1:(m1 - 1 + P[t] * K * 3)]
     KappaMean[[t]] <- aperm(array(probk, c(3, P[t], K)))
     m1 <- m1 + P[t] * K * 3
+    # Conditional probabilities: [iteration, feature, cluster, state].
+    count <- sample * P[t] * K * 3
+    draws <- res$probKappaSample[kappaOffset + seq_len(count)]
+    probKappaSample[[t]] <- aperm(array(draws, c(3, K, P[t], sample)), c(4, 3, 2, 1))
+    kappaOffset <- kappaOffset + count
   }
   probZMean <- matrix(res$probZMean1, n, byrow = TRUE)
 
-  list(
-    DIC = res$DIC, probZMean = probZMean, MuMean = MuMean,
-    CoefySample = t(matrix(res$CoefYsample, nrow = K)), sig2yM = res$sig2yMean,
-    KappaMean = KappaMean, TransMatMean = TransMatMean,
-    Betasample = Betasample1,
-    ZtestSample = t(matrix(res$Ztest, nrow = ntest)),
-    YpredTestSample = t(matrix(res$YpredTest, nrow = ntest)),
-    logpostsample = res$logpostsample
+  # Every post-burn-in iteration is retained in these arrays.
+  # MuSample: [iteration, platform, cluster, expression state].
+  MuSample <- aperm(array(res$MuSample, c(2, K, NbrPlat, sample)), c(4, 3, 2, 1))
+  # probZSample: [iteration, individual, cluster].
+  probZSample <- aperm(array(res$probZSample, c(K, n, sample)), c(3, 2, 1))
+  # Actual sampled labels: [iteration, individual], aligned with probZSample.
+  ZSample <- matrix(res$ZSample, nrow = sample, ncol = n, byrow = TRUE)
+
+  # Keep the iteration dimension even when there are no test individuals.
+  ZtestSample <- matrix(res$Ztest, nrow = sample, ncol = ntest, byrow = TRUE)
+  CoefySample <- matrix(res$CoefYsample, nrow = sample, ncol = K, byrow = TRUE)
+  Betasample <- Betasample1
+  YpredTestSample <- matrix(res$YpredTest, nrow = sample, ncol = ntest, byrow = TRUE)
+
+  # Each row lists the old cluster labels in their new order.
+  run <- label.switching::ecr.iterative.2(z = ZSample, K = K, p = probZSample)
+  permutations <- run$permutations
+  identity_permutations <- matrix(seq_len(K), nrow = sample, ncol = K, byrow = TRUE)
+  if (all(permutations == identity_permutations)) {
+    print("No Label switching is detected")
+  } else {
+    print("Label switching detected")
+    for (s in seq_len(sample)) {
+      perm <- permutations[s, ]
+      ZSample[s, ] <- match(ZSample[s, ], perm)
+      probZSample[s, , ] <- probZSample[s, , perm]
+      MuSample[s, , , ] <- MuSample[s, , perm, ]
+      CoefySample[s, ] <- CoefySample[s, perm]
+      for (d in seq_len(NbrPlat)) {
+        probKappaSample[[d]][s, , , ] <- probKappaSample[[d]][s, , perm, ]
+      }
+      if (ntest > 0) {
+        ZtestSample[s, ] <- match(ZtestSample[s, ], perm)
+      }
+    }
+    probZMean <- apply(probZSample, c(2, 3), mean)
+    MuMean <- apply(MuSample, c(2, 3, 4), mean)
+    KappaMean <- lapply(probKappaSample, function(x) {
+      aperm(apply(x, c(2, 3, 4), mean), c(2, 1, 3))
+    })
+    # Covariate coefficients have no cluster axis. Predictions are unchanged
+    # when cluster labels and their coefficients are permuted together.
+    print("Label switching addressed")
+  }
+
+  result <- list(
+    DIC = res$DIC,
+    probZMean = probZMean, MuMean = MuMean, KappaMean = KappaMean,
+    sig2yM = res$sig2yMean, TransMatMean = TransMatMean,ZtestSample = ZtestSample,
+    YpredTestSample = YpredTestSample,CoefySample = CoefySample,
+    Betasample = Betasample, logpostsample = res$logpostsample
   )
+  if (return_samples) {
+    result <- c(result, list(
+      ZSample = ZSample, probZSample = probZSample, MuSample = MuSample, probKappaSample = probKappaSample
+    ))
+  }
+  result
 }

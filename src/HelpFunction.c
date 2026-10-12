@@ -194,7 +194,7 @@ void SampleMuSigma(int K, int p, int n, int *Zk, int **kappajk, float ***Mu, flo
 }
 
 // ## Sample kappa
-void SampleKappa(int K, int p, int n, int *Zk, int **kappajk, float ***Mu, float ***sigma2, float **TransMat, float **dat, float *sigma2j3)
+void SampleKappa(int K, int p, int n, int *Zk, int **kappajk, float ***Mu, float ***sigma2, float **TransMat, float **dat, float *sigma2j3, double *probSample)
 {
   for (int k = 0; k < K; k++)
   {
@@ -244,6 +244,14 @@ void SampleKappa(int K, int p, int n, int *Zk, int **kappajk, float ***Mu, float
       {
         logprobkappa[l] = exp(logprobkappa[l] - maxpr);
       }
+      // Store normalized conditional probabilities before drawing the state.
+      if (probSample != NULL)
+      {
+        double total = 0;
+        for (int l = 0; l < 3; l++) total += logprobkappa[l];
+        for (int l = 0; l < 3; l++)
+          probSample[((size_t)j * K + k) * 3 + l] = logprobkappa[l] / total;
+      }
       int *rho1 = (int *)calloc(3, sizeof(int));
       ran_multinomial(3, 1, logprobkappa, rho1);
       int kl;
@@ -252,6 +260,7 @@ void SampleKappa(int K, int p, int n, int *Zk, int **kappajk, float ***Mu, float
       kappajk[j][k] = 1 + IDX[0];
       free(IDX);
       free(rho1);
+      free(logprobkappa);
       //        kappajk[j,k]=sample(1:3,size=1,prob=exp(logprobkappa-max(logprobkappa)))
     }
   }
@@ -292,7 +301,7 @@ void YPredict(float *Ypred, int *Zk, int pc, float **Cov, int n, int K, float *B
 }
 
 void SampleZ(int *Zk, int M, int n, int K, int *p, int ***kappajk, float ****sigma2, float ***dat, float ****Mu,
-             float **sigma2j3, double *Y, float *CoefY, float sig2y, float *Omeg, int pred)
+             float **sigma2j3, double *Y, float *CoefY, float sig2y, float *Omeg, int pred, double *probSample)
 {
   // ## Sample Z
 
@@ -321,6 +330,14 @@ void SampleZ(int *Zk, int M, int n, int K, int *p, int ***kappajk, float ****sig
     {
       logprobZ[k] = exp(logprobZ[k] - maxZ);
       // suml=suml+exp(logprobZ[k]-maxZ);
+    }
+    // Store normalized conditional probabilities before drawing the label.
+    if (probSample != NULL)
+    {
+      double total = 0;
+      for (int k = 0; k < K; k++) total += logprobZ[k];
+      for (int k = 0; k < K; k++)
+        probSample[(size_t)i * K + k] = logprobZ[k] / total;
     }
     int *rho1 = (int *)calloc(K, sizeof(int));
     ran_multinomial(K, 1, logprobZ, rho1);

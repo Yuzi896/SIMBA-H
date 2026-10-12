@@ -6,7 +6,6 @@
 \usage{
 iGenDataHMM(
   OrderFeatured = FALSE,
-  NumberFeature = 100,
   K = K,
   NbrPlat = 2,
   OutcType = "continuous",
@@ -19,15 +18,14 @@ iGenDataHMM(
   seed = 1,
   n = n,
   SigmaOE = rep(1, K),
-  SigmaUE = rep(1, K)
+  SigmaUE = rep(1, K),
+  nActive = 100L
 )
 }
 \arguments{
 \item{OrderFeatured}{Logical; if \code{TRUE}, uses a deterministic ordering for
-feature membership in each modality (features 1--100 over-expressed and
-101--200 under-expressed). If \code{FALSE}, feature membership is randomized.}
-
-\item{NumberFeature}{Integer; number of features sampled in over-expressed and under-expressed group.}
+feature membership in each modality (the first nActive features over-expressed and
+the next nActive under-expressed). If \code{FALSE}, feature membership is randomized.}
 
 \item{K}{Integer; number of clusters.}
 
@@ -35,7 +33,7 @@ feature membership in each modality (features 1--100 over-expressed and
 
 \item{OutcType}{Outcome type: one of \code{"continuous"}, \code{"binary"}, or \code{"censored"}.}
 
-\item{MeanY}{Numeric vector of length \code{K}; cluster-specific mean outcome levels.}
+\item{MeanY}{Numeric scalar, length-\code{K} vector, or NbrPlat by K matrix; cluster-specific mean outcome levels.}
 
 \item{pc}{Integer; number of covariates to generate. Must be a positive integer.}
 
@@ -43,10 +41,10 @@ feature membership in each modality (features 1--100 over-expressed and
 are assigned as \code{+(betacov)} for the first half and \code{-(betacov)}
 for the remainder.}
 
-\item{MeanOverExpre}{Numeric vector of length \code{K}; means for over-expressed
+\item{MeanOverExpre}{Numeric scalar, length-\code{K} vector, or NbrPlat by K matrix; means for over-expressed
 features in each cluster.}
 
-\item{MeanUnderExpre}{Numeric vector of length \code{K}; means for under-expressed
+\item{MeanUnderExpre}{Numeric scalar, length-\code{K} vector, or NbrPlat by K matrix; means for under-expressed
 features in each cluster.}
 
 \item{p}{Integer vector of length \code{NbrPlat}; number of features per modality.}
@@ -55,9 +53,12 @@ features in each cluster.}
 
 \item{n}{Integer; number of samples.}
 
-\item{SigmaOE}{Numeric vector of length \code{K}; standard deviations for over-expressed features.}
+\item{SigmaOE}{Numeric scalar, length-\code{K} vector, or NbrPlat by K matrix; standard deviations for over-expressed features.}
 
-\item{SigmaUE}{Numeric vector of length \code{K}; standard deviations for under-expressed features.}
+\item{SigmaUE}{Numeric scalar, length-\code{K} vector, or NbrPlat by K matrix; standard deviations for under-expressed features.}
+
+\item{nActive}{Positive integer or length-NbrPlat vector; number of features
+in each active state per modality (default 100).}
 }
 \value{
 A list with components:
@@ -87,10 +88,10 @@ approximately equal-sized blocks.
 
 \strong{Feature membership (\code{kappajk}):} For each modality \eqn{m}, a
 \eqn{p_m \times K} matrix is generated with entries in \code{\{1,2,3\}}.
-If \code{OrderFeatured = TRUE}, features 1--100 are set to state \code{1}
-(over-expressed) and features 101--200 to state \code{2} (under-expressed).
-Otherwise, 100 over- and 100 under-expressed features are sampled at random
-for each modality (requires \code{p[m] >= 200}).
+If \code{OrderFeatured = TRUE}, the first nActive features are set to state \code{1}
+(over-expressed) and the next nActive features to state \code{2} (under-expressed).
+Otherwise, nActive over- and nActive under-expressed features are sampled at random
+for each modality (requires \code{p[m] >= 2 * nActive[m]}).
 
 \strong{Outcome generation:} A latent mean \code{MeanY[Zk[i]]} is assigned to
 each sample and combined with a linear covariate effect. Continuous outcomes
@@ -104,7 +105,7 @@ K <- 2
 p <- c(300, 500)
 n <- 100
 dat <- iGenDataHMM(
-  OrderFeatured = TRUE, NumberFeature = 100, K = K, NbrPlat = 2,
+  OrderFeatured = TRUE, nActive = 100, K = K, NbrPlat = 2,
   OutcType = "continuous", MeanY = c(1, -1), pc = 4, betacov = 1.0,
   MeanOverExpre = (1:K) / 2, MeanUnderExpre = -(1:K) / 2,
   p = p, seed = 1, n = n,

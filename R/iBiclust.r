@@ -1,7 +1,9 @@
-#' Bayesian Supervised Biclustering via Hidden Markov Models for Multi-Modal Data
+#' Bayesian Supervised Biclustering with SIMBA-H or SIMBA for Multi-Modal Data
 #'
 #' Fits a Bayesian model-based supervised biclustering model for multi-modality
-#' datasets using an Gibb sampling algorithm. Each modality/platform is provided as a matrix
+#' datasets using a Gibbs sampling algorithm. SIMBA-H incorporates a Hidden
+#' Markov Model (HMM) structure across ordered features; SIMBA does not incorporate
+#' the HMM structure. Each modality/platform is provided as a matrix
 #' with samples in rows and features in columns; internally, each matrix is
 #' optionally standardized (centered/scaled) and transposed before being passed
 #' to the native routine.
@@ -20,10 +22,10 @@
 #' }
 #'
 #' \strong{Ordering requirement (HMM):}
-#' If \code{Enable_HMM = TRUE} (Hidden Markov Model), the features within each
+#' If \code{Method = "SIMBA-H"} (the default), the features within each
 #' modality in \code{dataList} are assumed to be pre-ordered according to
 #' their natural or genomic sequence. The function does not reorder features
-#' internally.
+#' internally. For \code{Method = "SIMBA"}, no feature ordering is required.
 #'
 #'
 #' \strong{Outcome types:}
@@ -40,9 +42,10 @@
 #' the training means/SDs.
 #'
 #'
-#' @param Enable_HMM Logical; if \code{TRUE} (default), the model incorporates
-#'   a Hidden Markov Model (HMM). If \code{FALSE}, the model does not incorporate
-#'   the HMM structure.
+#' @param Method Character string specifying the modeling approach: either
+#'   \code{"SIMBA-H"} (default), which incorporates a Hidden Markov Model (HMM)
+#'   structure across ordered features, or \code{"SIMBA"}, which does not
+#'   incorporate the HMM structure.
 #' @param dataList A list of modality matrices. Each \code{dataList[[t]]} is an
 #'   \eqn{n \times p_t} matrix with samples in rows and features in columns.
 #' @param OutcType Outcome type: one of \code{"continuous"}, \code{"binary"}, or \code{"censored"}.
@@ -63,8 +66,10 @@
 #'  concentration parameters for the cluster probability vector. These parameters
 #'  control the prior probability that a sample belongs to each cluster \eqn{k}.
 #' @param delt Numeric vector of length 3 giving the Dirichlet prior concentration
-#'  parameters \eqn{(\delta_1, \delta_2, \delta_3)} for each row of the transition
-#'  matrix \eqn{\xi}.
+#'  parameters \eqn{(\delta_1, \delta_2, \delta_3)}. For
+#'  \code{Method = "SIMBA-H"}, these specify the prior for each row of the
+#'  transition matrix \eqn{\xi}. For \code{Method = "SIMBA"}, they specify
+#'  the prior for the feature-state probability vector.
 #' @param TruncVal Positive numeric truncation threshold \eqn{t} used in the Gibbs sampler.
 #' @param dataListTest Optional test set list with same structure as \code{dataList}.
 #' @param CovTest Optional test covariate matrix of dimension \eqn{n_{test} \times p_c}.
@@ -86,7 +91,9 @@
 #'   \item{CoefySample}{cluster-specific outcome means with dimension \eqn{sample \times K}.}
 #'   \item{sig2yM}{Posterior mean of outcome variance parameter.}
 #'   \item{KappaMean}{List of arrays of posterior means for biclustering indicators per modality.}
-#'   \item{TransMatMean}{Array of posterior mean transition matrices per modality.}
+#'   \item{TransMatMean}{Array of posterior mean transition matrices per modality
+#'     for \code{Method = "SIMBA-H"}. For \code{Method = "SIMBA"}, each
+#'     matrix has identical rows containing posterior mean feature-state probabilities.}
 #'   \item{Betasample}{Matrix of sampled covariate coefficients (\eqn{sample \times p_c}).}
 #'   \item{ZtestSample}{Matrix of sampled test cluster labels (\eqn{sample \times n_{test}}) if test data provided.}
 #'   \item{YpredTestSample}{Matrix of sampled test predictions (\eqn{sample \times n_{test}}) if test data provided.}
@@ -122,9 +129,10 @@
 #'   SigmaOE = rep(1, K), SigmaUE = rep(1, K)
 #' )
 #'
-#' ## Fit model (keep MCMC small in examples)
+#' ## Fit SIMBA-H with the HMM structure (keep MCMC small in examples)
+#' ## Use Method = "SIMBA" to fit without the HMM structure.
 #' result <- iBiclust(
-#'   Enable_HMM = TRUE,
+#'   Method = "SIMBA-H",
 #'   dataList = dat$X,
 #'   Youtcome = dat$Y,
 #'   OutcType = OutcType,
@@ -149,14 +157,19 @@
 #' @export
 
 iBiclust <- function(
-    Enable_HMM = TRUE, dataList = dataList, OutcType = "continuous",
+    Method = "SIMBA-H", dataList = dataList, OutcType = "continuous",
     Youtcome = Youtcome, Cov = NULL, sample = 2000, burnin = 1000, K = 2,
     normalized = TRUE, seed = 1, hyperSigma = c(1, 1), alphaP = rep(1, K),
     delt = rep(1, 3), TruncVal = .1, dataListTest = NULL, CovTest = NULL,
     return_samples = FALSE) {
-  if (!is.logical(Enable_HMM) || length(Enable_HMM) != 1L || is.na(Enable_HMM)) {
-    stop("Enable_HMM must be TRUE or FALSE")
+  if (!is.character(Method) || length(Method) != 1L || is.na(Method) ||
+      !Method %in% c("SIMBA-H", "SIMBA")) {
+    stop('Method must be "SIMBA-H" or "SIMBA"')
   }
+
+  # The native sampler uses 1 for SIMBA-H (HMM) and 2 for SIMBA (no HMM).
+  MethodCode <- if (Method == "SIMBA-H") 1L else 2L
+
   # Latent draws are used for label switching; return those only on request.
   if (!is.logical(return_samples) || length(return_samples) != 1L || is.na(return_samples)) {
     stop("return_samples must be TRUE or FALSE")
@@ -231,9 +244,9 @@ iBiclust <- function(
   # double *rhosigma, double *gamsigma, double *alphaP, double *delt, double *sigma20Mu1, int *Nsample1,
   # int *burnin1, int *seed1,double *probZMean1, double *probkappajk1, double *TransMatMean1, double *MuMean1, d
   # ouble *CoefYMean, double *sig2yMean, float *logpostsample, float *DIC)
-  sampler <- getNativeSymbolInfo("MCMCfunctionWithProbAndZSamples", PACKAGE = "iBHMM")
+  sampler <- getNativeSymbolInfo("MCMCfunctionWithProbAndZSamples", PACKAGE = "SIMBAH")
   res <- .C(sampler,
-            Method = as.integer(Enable_HMM), OutcomeType = as.integer(OutcomeType),
+            Method = as.integer(MethodCode), OutcomeType = as.integer(OutcomeType),
             M1 = as.integer(NbrPlat),
             p1 = as.integer(P), nn = as.integer(n), Data1 = as.double(datasets),
             Cov1 = as.double(Cov1), pc = as.integer(pc),

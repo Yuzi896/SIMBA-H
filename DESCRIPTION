@@ -1,5 +1,5 @@
-Package: iBHMM
-Title: iBHMM: Bayesian Supervised Biclustering via Hidden Markov Models
+Package: SIMBAH
+Title: SIMBA-H: Supervised Integrative Modeling for Biclustering and Analysis via HMM
 Version: 0.1.1
 Authors@R: 
     person("Yuzi", "Mi", , "mi000014@umn.edu", role = c("aut", "cre"))

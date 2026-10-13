@@ -2,10 +2,10 @@
 % Please edit documentation in R/iBiclust.r
 \name{iBiclust}
 \alias{iBiclust}
-\title{Bayesian Supervised Biclustering via Hidden Markov Models for Multi-Modal Data}
+\title{Bayesian Supervised Biclustering with SIMBA-H or SIMBA for Multi-Modal Data}
 \usage{
 iBiclust(
-  Enable_HMM = TRUE,
+  Method = "SIMBA-H",
   dataList = dataList,
   OutcType = "continuous",
   Youtcome = Youtcome,
@@ -25,9 +25,10 @@ iBiclust(
 )
 }
 \arguments{
-\item{Enable_HMM}{Logical; if \code{TRUE} (default), the model incorporates
-a Hidden Markov Model (HMM). If \code{FALSE}, the model does not incorporate
-the HMM structure.}
+\item{Method}{Character string specifying the modeling approach: either
+\code{"SIMBA-H"} (default), which incorporates a Hidden Markov Model (HMM)
+structure across ordered features, or \code{"SIMBA"}, which does not
+incorporate the HMM structure.}
 
 \item{dataList}{A list of modality matrices. Each \code{dataList[[t]]} is an
 \eqn{n \times p_t} matrix with samples in rows and features in columns.}
@@ -60,8 +61,10 @@ concentration parameters for the cluster probability vector. These parameters
 control the prior probability that a sample belongs to each cluster \eqn{k}.}
 
 \item{delt}{Numeric vector of length 3 giving the Dirichlet prior concentration
-parameters \eqn{(\delta_1, \delta_2, \delta_3)} for each row of the transition
-matrix \eqn{\xi}.}
+parameters \eqn{(\delta_1, \delta_2, \delta_3)}. For
+\code{Method = "SIMBA-H"}, these specify the prior for each row of the
+transition matrix \eqn{\xi}. For \code{Method = "SIMBA"}, they specify
+the prior for the feature-state probability vector.}
 
 \item{TruncVal}{Positive numeric truncation threshold \eqn{t} used in the Gibbs sampler.}
 
@@ -88,7 +91,9 @@ states (\eqn{l = 1,2}), indexed by modality \eqn{d} and cluster \eqn{k}.}
 \item{CoefySample}{cluster-specific outcome means with dimension \eqn{sample \times K}.}
 \item{sig2yM}{Posterior mean of outcome variance parameter.}
 \item{KappaMean}{List of arrays of posterior means for biclustering indicators per modality.}
-\item{TransMatMean}{Array of posterior mean transition matrices per modality.}
+\item{TransMatMean}{Array of posterior mean transition matrices per modality
+for \code{Method = "SIMBA-H"}. For \code{Method = "SIMBA"}, each
+matrix has identical rows containing posterior mean feature-state probabilities.}
 \item{Betasample}{Matrix of sampled covariate coefficients (\eqn{sample \times p_c}).}
 \item{ZtestSample}{Matrix of sampled test cluster labels (\eqn{sample \times n_{test}}) if test data provided.}
 \item{YpredTestSample}{Matrix of sampled test predictions (\eqn{sample \times n_{test}}) if test data provided.}
@@ -97,7 +102,9 @@ states (\eqn{l = 1,2}), indexed by modality \eqn{d} and cluster \eqn{k}.}
 }
 \description{
 Fits a Bayesian model-based supervised biclustering model for multi-modality
-datasets using an Gibb sampling algorithm. Each modality/platform is provided as a matrix
+datasets using a Gibbs sampling algorithm. SIMBA-H incorporates a Hidden
+Markov Model (HMM) structure across ordered features; SIMBA does not incorporate
+the HMM structure. Each modality/platform is provided as a matrix
 with samples in rows and features in columns; internally, each matrix is
 optionally standardized (centered/scaled) and transposed before being passed
 to the native routine.
@@ -116,10 +123,10 @@ from the test data).
 }
 
 \strong{Ordering requirement (HMM):}
-If \code{Enable_HMM = TRUE} (Hidden Markov Model), the features within each
+If \code{Method = "SIMBA-H"} (the default), the features within each
 modality in \code{dataList} are assumed to be pre-ordered according to
 their natural or genomic sequence. The function does not reorder features
-internally.
+internally. For \code{Method = "SIMBA"}, no feature ordering is required.
 
 \strong{Outcome types:}
 \itemize{
@@ -163,9 +170,10 @@ datTest <- iGenDataHMM(
   SigmaOE = rep(1, K), SigmaUE = rep(1, K)
 )
 
-## Fit model (keep MCMC small in examples)
+## Fit SIMBA-H with the HMM structure (keep MCMC small in examples)
+## Use Method = "SIMBA" to fit without the HMM structure.
 result <- iBiclust(
-  Enable_HMM = TRUE,
+  Method = "SIMBA-H",
   dataList = dat$X,
   Youtcome = dat$Y,
   OutcType = OutcType,
